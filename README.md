@@ -80,7 +80,7 @@ Advanced training analytics with power curves, detailed workout analysis, wellne
 
 1. Go to [Strava API Settings](https://www.strava.com/settings/api)
 2. Create a new application:
-   - **Application Name**: `strava-mcp-server`
+   - **Application Name**: `fitness-mcp-server`
    - **Category**: `Data Importer`
    - **Authorization Callback Domain**: `localhost`
    - Upload any icon image
@@ -91,7 +91,7 @@ Advanced training analytics with power curves, detailed workout analysis, wellne
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd strava-mcp-server
+cd fitness-mcp-server
 
 # Install dependencies
 uv sync
@@ -147,8 +147,8 @@ Edit your Claude Desktop configuration file:
   "mcpServers": {
     "intervals": {
       "command": "uv",
-      "args": ["--directory", "/path/to/strava-mcp-server", "run", "python", "run_intervals_server.py"],
-      "cwd": "/path/to/strava-mcp-server"
+      "args": ["--directory", "/path/to/fitness-mcp-server", "run", "python", "run_intervals_server.py"],
+      "cwd": "/path/to/fitness-mcp-server"
     }
   }
 }
@@ -160,19 +160,19 @@ Edit your Claude Desktop configuration file:
   "mcpServers": {
     "strava": {
       "command": "uv",
-      "args": ["--directory", "/path/to/strava-mcp-server", "run", "python", "run_server.py"],
-      "cwd": "/path/to/strava-mcp-server"
+      "args": ["--directory", "/path/to/fitness-mcp-server", "run", "python", "run_server.py"],
+      "cwd": "/path/to/fitness-mcp-server"
     },
     "intervals": {
       "command": "uv",
-      "args": ["--directory", "/path/to/strava-mcp-server", "run", "python", "run_intervals_server.py"],
-      "cwd": "/path/to/strava-mcp-server"
+      "args": ["--directory", "/path/to/fitness-mcp-server", "run", "python", "run_intervals_server.py"],
+      "cwd": "/path/to/fitness-mcp-server"
     }
   }
 }
 ```
 
-Replace `/path/to/strava-mcp-server` with the actual path to your project directory.
+Replace `/path/to/fitness-mcp-server` with the actual path to your project directory.
 
 ### Restart Claude Desktop
 

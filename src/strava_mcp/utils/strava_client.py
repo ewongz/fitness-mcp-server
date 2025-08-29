@@ -2,17 +2,34 @@ import os
 import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
+import urllib.parse
 
 from ..models.strava_models import Activity, Athlete, AthleteStats
 
 
 class StravaClient:
-    """Client for interacting with Strava API."""
+    """Client for interacting with Strava API with full scope support."""
     
     BASE_URL = "https://www.strava.com/api/v3"
+    OAUTH_URL = "https://www.strava.com/oauth/authorize"
+    TOKEN_URL = "https://www.strava.com/oauth/token"
+    
+    # Full scope permissions for maximum access
+    FULL_SCOPES = [
+        "read",                    # Read public profile data
+        "read_all",               # Read all profile data 
+        "profile:read_all",       # Read all profile information
+        "activity:read",          # Read public activities
+        "activity:read_all",      # Read all activities (including private)
+        "activity:write"          # Write activities (optional)
+    ]
     
     def __init__(self):
         self.access_token = os.getenv("STRAVA_ACCESS_TOKEN")
+        self.client_id = os.getenv("STRAVA_CLIENT_ID")
+        self.client_secret = os.getenv("STRAVA_CLIENT_SECRET")
+        self.refresh_token = os.getenv("STRAVA_REFRESH_TOKEN")
+        
         if not self.access_token:
             raise ValueError("STRAVA_ACCESS_TOKEN environment variable is required")
         
@@ -49,6 +66,82 @@ class StravaClient:
                 raise ValueError(f"Strava API error: {e.response.status_code} - {e.response.text}")
         except httpx.RequestError as e:
             raise ValueError(f"Network error when connecting to Strava API: {str(e)}")
+    
+    def generate_auth_url(self, redirect_uri: str = "localhost", state: Optional[str] = None) -> str:
+        """Generate OAuth authorization URL with full scopes."""
+        if not self.client_id:
+            raise ValueError("STRAVA_CLIENT_ID environment variable is required for OAuth")
+        
+        params = {
+            "client_id": self.client_id,
+            "response_type": "code",
+            "redirect_uri": redirect_uri,
+            "approval_prompt": "force",
+            "scope": ",".join(self.FULL_SCOPES)
+        }
+        
+        if state:
+            params["state"] = state
+        
+        query_string = urllib.parse.urlencode(params)
+        return f"{self.OAUTH_URL}?{query_string}"
+    
+    async def exchange_code_for_token(self, authorization_code: str) -> Dict[str, Any]:
+        """Exchange authorization code for access token with full scopes."""
+        if not self.client_id or not self.client_secret:
+            raise ValueError("STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET required for token exchange")
+        
+        data = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "code": authorization_code,
+            "grant_type": "authorization_code"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.TOKEN_URL, data=data)
+            response.raise_for_status()
+            return response.json()
+    
+    async def refresh_access_token(self) -> Dict[str, Any]:
+        """Refresh expired access token using refresh token."""
+        if not self.refresh_token or not self.client_id or not self.client_secret:
+            raise ValueError("STRAVA_REFRESH_TOKEN, STRAVA_CLIENT_ID, and STRAVA_CLIENT_SECRET required for token refresh")
+        
+        data = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "refresh_token": self.refresh_token,
+            "grant_type": "refresh_token"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(self.TOKEN_URL, data=data)
+            response.raise_for_status()
+            token_data = response.json()
+            
+            # Update the client with new token
+            self.access_token = token_data["access_token"]
+            self.refresh_token = token_data["refresh_token"]
+            self.client.headers["Authorization"] = f"Bearer {self.access_token}"
+            
+            return token_data
+    
+    async def get_token_info(self) -> Dict[str, Any]:
+        """Get information about the current access token including scopes."""
+        try:
+            # This endpoint doesn't exist in Strava API, but we can infer from successful calls
+            athlete_data = await self._make_request("GET", "/athlete")
+            return {
+                "athlete_id": athlete_data["id"],
+                "token_valid": True,
+                "scopes_available": "Check by testing different endpoints"
+            }
+        except Exception as e:
+            return {
+                "token_valid": False,
+                "error": str(e)
+            }
     
     async def get_athlete(self) -> str:
         """Get authenticated athlete's profile."""
