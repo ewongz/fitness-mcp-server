@@ -4,7 +4,7 @@ Intervals.icu API client utilities.
 Provides methods to interact with the intervals.icu API for accessing
 activity data, performance metrics, and training analytics.
 """
-
+import base64
 import os
 import httpx
 from typing import Optional, List, Dict, Any, Union
@@ -25,17 +25,19 @@ class IntervalsClient:
     def __init__(self, api_key: Optional[str] = None, base_url: str = "https://intervals.icu"):
         """Initialize the client with API credentials."""
         self.api_key = api_key or os.getenv("INTERVALS_API_KEY")
+        self.athlete_id = os.getenv("INTERVALS_ATHLETE_ID")
         self.base_url = base_url.rstrip("/")
         
         if not self.api_key:
             raise ValueError("API key is required. Set INTERVALS_API_KEY environment variable or pass api_key parameter.")
         
+        b64encoded_creds = base64.b64encode(f"API_KEY:{self.api_key}".encode("utf-8")).decode("utf-8")
+        headers={
+            "Authorization": f"Basic {b64encoded_creds}",
+            "accept": "*/*"
+        }
         self._client = httpx.AsyncClient(
-            headers={
-                "Authorization": f"APIKey {self.api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": "intervals-mcp-server/1.0"
-            },
+            headers=headers,
             timeout=30.0
         )
     
@@ -54,7 +56,6 @@ class IntervalsClient:
     ) -> Dict[str, Any]:
         """Make HTTP request to intervals.icu API."""
         url = f"{self.base_url}{endpoint}"
-        
         try:
             response = await self._client.request(
                 method=method,

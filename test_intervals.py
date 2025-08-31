@@ -33,12 +33,15 @@ async def test_intervals_client():
         async with IntervalsClient() as client:
             # Test 1: Get athlete profile
             print("\n1. Testing get_athlete...")
+            print(client._client)
             athlete = await client.get_athlete(athlete_id)
             print(f"✅ Athlete: {athlete.name} from {athlete.city or 'Unknown'}, {athlete.country or 'Unknown'}")
             
             # Test 2: Get recent activities
             print("\n2. Testing get_activities...")
-            activities = await client.get_activities(athlete_id, limit=5)
+            from datetime import date, timedelta
+            start_date = date.today() - timedelta(days=30)  # Last 30 days
+            activities = await client.get_activities(athlete_id, limit=5, start_date=start_date)
             print(f"✅ Found {len(activities)} recent activities:")
             for activity in activities[:3]:  # Show first 3
                 print(f"   - {activity.name} ({activity.type}) on {activity.start_date_local}")
